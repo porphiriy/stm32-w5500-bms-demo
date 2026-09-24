@@ -1,0 +1,41 @@
+# =========================
+# STM32CubeIDE / Eclipse
+# =========================
+
+# Build folders
+Debug/
+Release/
+build/
+cmake-build-*/
+
+# Object / binary files
+*.o
+*.obj
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+*.lst
+*.d
+*.su
+*.cyclo
+*.srec
+
+# Eclipse / CubeIDE local metadata
+.metadata/
+.settings/
+*.launch
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temporary / backup files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
