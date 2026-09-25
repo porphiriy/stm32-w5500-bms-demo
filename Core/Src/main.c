@@ -149,7 +149,7 @@ static void W5500_Init(void)
     reg_wizchip_cs_cbfunc(W5500_Select, W5500_Deselect);
     reg_wizchip_spi_cbfunc(W5500_ReadByte, W5500_WriteByte);
 
-    uint8_t tx_size[8] = {2,2,2,2,2,2,2,2};
+    uint8_t tx_size[8] = {4,2,2,2,2,2,2,0};
     uint8_t rx_size[8] = {2,2,2,2,2,2,2,2};
 
     wizchip_init(tx_size, rx_size);
@@ -175,47 +175,133 @@ static const char web_page[] =
 "<meta charset='UTF-8'>"
 "<meta name='viewport' content='width=device-width,initial-scale=1'>"
 "<title>BUREVII BMS</title>"
+
 "<style>"
 "body{margin:0;background:#111827;color:#e5e7eb;font-family:Arial,sans-serif;}"
-".wrap{max-width:800px;margin:40px auto;padding:20px;}"
+".wrap{max-width:900px;margin:40px auto;padding:20px;}"
 "h1{margin-bottom:5px;}"
 ".sub{color:#9ca3af;margin-bottom:25px;}"
+".dot{display:inline-block;width:10px;height:10px;border-radius:50%;"
+"background:#22c55e;margin-right:8px;}"
+
 ".card{background:#1f2937;border-radius:14px;padding:22px;margin-bottom:16px;"
 "box-shadow:0 4px 15px rgba(0,0,0,.25);}"
-".label{font-size:14px;color:#9ca3af;margin-bottom:8px;}"
-".value{font-size:24px;font-weight:bold;word-break:break-all;}"
-".status{display:inline-block;width:10px;height:10px;border-radius:50%;"
-"background:#22c55e;margin-right:8px;}"
-"#time{font-size:13px;color:#9ca3af;margin-top:12px;}"
+
+".label{font-size:14px;color:#9ca3af;}"
+".voltage{font-size:48px;font-weight:bold;margin-top:8px;}"
+".unit{font-size:24px;color:#9ca3af;}"
+
+"canvas{width:100%;height:300px;display:block;margin-top:20px;}"
+"#time{font-size:13px;color:#9ca3af;margin-top:10px;}"
 "</style>"
 "</head>"
+
 "<body>"
 "<div class='wrap'>"
+
 "<h1>BUREVII</h1>"
-"<div class='sub'><span class='status'></span>BMS monitor online</div>"
+"<div class='sub'><span class='dot'></span>BMS monitor online</div>"
 
 "<div class='card'>"
-"<div class='label'>UART DATA</div>"
-"<div class='value' id='uart'>Waiting for data...</div>"
+"<div class='label'>BATTERY VOLTAGE</div>"
+"<div class='voltage'>"
+"<span id='voltage'>--.--</span>"
+"<span class='unit'> V</span>"
+"</div>"
 "<div id='time'></div>"
+"</div>"
+
+"<div class='card'>"
+"<div class='label'>VOLTAGE HISTORY</div>"
+"<canvas id='chart'></canvas>"
 "</div>"
 
 "</div>"
 
 "<script>"
-"async function updateData(){"
-" try{"
-"  const r=await fetch('/data',{cache:'no-store'});"
-"  const t=await r.text();"
-"  document.getElementById('uart').textContent=t;"
-"  document.getElementById('time').textContent="
-"    'Updated: '+new Date().toLocaleTimeString();"
-" }catch(e){"
-"  document.getElementById('uart').textContent='Connection lost';"
+
+"const canvas=document.getElementById('chart');"
+"const ctx=canvas.getContext('2d');"
+
+"let values=[];"
+"const maxPoints=60;"
+
+"function drawChart(){"
+
+" canvas.width=canvas.clientWidth;"
+" canvas.height=300;"
+
+" const w=canvas.width;"
+" const h=canvas.height;"
+
+" const minV=48;"
+" const maxV=54;"
+
+" ctx.clearRect(0,0,w,h);"
+
+" ctx.strokeStyle='#374151';"
+" ctx.lineWidth=1;"
+
+" for(let i=0;i<=6;i++){"
+"   let y=i*h/6;"
+"   ctx.beginPath();"
+"   ctx.moveTo(0,y);"
+"   ctx.lineTo(w,y);"
+"   ctx.stroke();"
 " }"
+
+" if(values.length<2)return;"
+
+" ctx.strokeStyle='#22c55e';"
+" ctx.lineWidth=3;"
+" ctx.beginPath();"
+
+" values.forEach((v,i)=>{"
+
+"   const x=i*(w/(maxPoints-1));"
+"   const y=h-(v-minV)/(maxV-minV)*h;"
+
+"   if(i===0)ctx.moveTo(x,y);"
+"   else ctx.lineTo(x,y);"
+
+" });"
+
+" ctx.stroke();"
 "}"
+
+"async function updateData(){"
+
+" try{"
+
+"   const response=await fetch('/data',{cache:'no-store'});"
+"   const text=await response.text();"
+
+"   if(text.startsWith('V:')){"
+
+"     const v=parseFloat(text.substring(2));"
+
+"     if(!isNaN(v)){"
+
+"       document.getElementById('voltage').textContent=v.toFixed(2);"
+
+"       values.push(v);"
+
+"       if(values.length>maxPoints)"
+"         values.shift();"
+
+"       drawChart();"
+
+"       document.getElementById('time').textContent="
+"         'Updated: '+new Date().toLocaleTimeString();"
+"     }"
+"   }"
+
+" }catch(e){}"
+"}"
+
 "updateData();"
 "setInterval(updateData,500);"
+
 "</script>"
 
 "</body>"
